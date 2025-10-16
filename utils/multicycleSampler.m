@@ -1,0 +1,49 @@
+function currentCycle = multicycleSampler(Qnom, numParallelCells, samplingFrequency, RestTime0, RestTime1, chargeRate, RestTime2, dischargeRate, RestTime3, numChargeCycles, ...
+    depthOfCharge, depthOfdischarge)
+
+    time_intervals = [ ...
+        RestTime0, ...
+        3600 * 0.10 / dischargeRate, ...
+        RestTime1, ...
+        3600 * depthOfCharge / chargeRate, ...
+        RestTime2, ...
+        3600 * depthOfdischarge / dischargeRate, ...
+        RestTime3];
+    
+    currentDraw = numParallelCells * Qnom * [ ...
+        0, ...
+        dischargeRate, ...
+        0, ...
+        -chargeRate, ...
+        0, ...
+        dischargeRate, ...
+        0];
+    
+    % Total simulation time per cycle
+    total_time = sum(time_intervals);
+
+    % Base time vector for a single cycle
+    t_single = 0:samplingFrequency:(total_time - samplingFrequency);
+
+    % Current profile for a single cycle
+    current_single = zeros(size(t_single));
+    t_cursor = 0;
+    for i = 1:length(time_intervals)
+        t_start = t_cursor;
+        t_end = t_cursor + time_intervals(i);
+        
+        mask = (t_single >= t_start) & (t_single < t_end);
+        current_single(mask) = currentDraw(i);
+        
+        t_cursor = t_end;
+    end
+
+    % Repeat for numCycles
+    currentCycle = [];
+    for k = 1:numChargeCycles
+        t_offset = (k-1) * total_time;
+        t_cycle = t_single + t_offset;
+        currentCycle = [currentCycle; [t_cycle', current_single']];
+    end
+
+end
